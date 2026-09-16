@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { AIRPORT_CODES } from "./airports";
+import { AIRPORT_CODES, type AirportCode } from "./airports";
 import type { FlightInfoResponse, HeartbeatResponse, QueryArgs } from "./flight-types";
 
 const airportSchema = z.enum(AIRPORT_CODES as [string, ...string[]]);
@@ -62,7 +62,7 @@ export const queryFlights = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<FlightInfoResponse> => {
     const { runQuery } = await import("./swedavia.server");
     const args: QueryArgs = {};
-    if (data.airport) args.airport = data.airport as QueryArgs["airport"];
+    if (data.airport) args.airport = data.airport as AirportCode;
     if (data.flightType) args.flightType = data.flightType;
     if (data.scheduled) args.scheduled = data.scheduled;
     if (data.flightId) args.flightId = data.flightId;
