@@ -9,6 +9,7 @@ const TONES: Record<string, StatusTone> = {
   LAN: "green",
   ARR: "green",
   DEP: "green",
+  CAN: "red",
   DEL: "red",
   CNL: "red",
   DELETED: "red",

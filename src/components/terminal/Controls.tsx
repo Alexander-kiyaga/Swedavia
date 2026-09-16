@@ -15,6 +15,12 @@ const QUICK: Array<"nu" | "idag" | "imorgon" | "igår"> = ["nu", "idag", "imorgo
 export function Controls({ airport, date, onAirport, onDate }: Props) {
   const [query, setQuery] = useState("");
   const matches = useMemo(() => searchAirports(query), [query]);
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const min = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const max = new Date(now.getTime() + 90 * 86_400_000).toISOString().slice(0, 10);
+    return { min, max };
+  }, []);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -71,6 +77,8 @@ export function Controls({ airport, date, onAirport, onDate }: Props) {
           id="date-input"
           type="date"
           value={date}
+          min={dateRange.min}
+          max={dateRange.max}
           onChange={(e) => onDate(e.target.value)}
           className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 text-foreground"
         />

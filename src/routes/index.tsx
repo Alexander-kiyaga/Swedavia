@@ -14,7 +14,7 @@ import { AIRPORTS, type AirportCode, isAirportCode } from "@/lib/airports";
 import type { FlightInfoResponse, NormalizedFlight, QueryArgs } from "@/lib/flight-types";
 import { getFlights, heartbeat, queryFlights } from "@/lib/flightinfo.functions";
 import { normalizeFlightNumber } from "@/lib/odata-preview";
-import { quickDate } from "@/lib/time";
+import { isValidApiDate, quickDate } from "@/lib/time";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,10 +69,11 @@ function Index() {
 
   const direction = view === "2" ? "departures" : "arrivals";
   const listActive = view === "1" || view === "2" || view === "dest";
+  const dateValid = isValidApiDate(date);
 
   const listQuery = useQuery({
     queryKey: ["flights", direction, airport, date],
-    enabled: listActive,
+    enabled: listActive && dateValid,
     staleTime: 60_000,
     queryFn: () => callFlights({ data: { action: direction, airport, date } }),
   });
@@ -81,7 +82,8 @@ function Index() {
     const res = listQuery.data;
     if (!res) return;
     setMock(res.ok ? res.meta.mock : res.mock);
-    setOnline(res.ok || res.kind === "notfound");
+    if (res.ok || res.kind === "notfound") setOnline(true);
+    else if (res.kind !== "input") setOnline(false);
   }, [listQuery.data]);
 
   const listFlights: NormalizedFlight[] = useMemo(
@@ -97,12 +99,22 @@ function Index() {
         const res = await callQuery({ data: { action: "query" as const, ...args } });
         setManualResult(res);
         setMock(res.ok ? res.meta.mock : res.mock);
-        setOnline(res.ok);
+        if (res.ok || res.kind === "notfound") setOnline(true);
+        else if (res.kind !== "input") setOnline(false);
+      } catch {
+        setManualResult({
+          ok: false,
+          kind: "upstream",
+          message: "Förfrågan kunde inte genomföras. Försök igen.",
+          status: null,
+          mock,
+        });
+        setOnline(false);
       } finally {
         setManualLoading(false);
       }
     },
-    [callQuery],
+    [callQuery, mock],
   );
 
   const runHeartbeat = useCallback(async () => {
@@ -135,31 +147,45 @@ function Index() {
       setDemoSteps([...steps]);
     };
 
-    update(0, { state: "running" });
-    const hb = await callHeartbeat({});
-    update(0, {
-      state: hb.ok ? "success" : "error",
-      detail: hb.ok ? hb.message : hb.message,
-    });
-
-    for (const [i, action] of (["arrivals", "departures"] as const).entries()) {
-      update(i + 1, { state: "running" });
-      const res = await callFlights({ data: { action, airport, date } });
-      update(i + 1, {
-        state: res.ok ? "success" : "error",
-        detail: res.ok ? `${res.flights.length} flygningar` : res.message,
+    try {
+      update(0, { state: "running" });
+      const hb = await callHeartbeat({});
+      update(0, {
+        state: hb.ok ? "success" : "error",
+        detail: hb.message,
       });
-    }
 
-    update(3, { state: "running" });
-    const q = await callQuery({
-      data: { action: "query" as const, airport, flightType: "A" as const, scheduled: date, count: 50 },
-    });
-    update(3, {
-      state: q.ok ? "success" : "error",
-      detail: q.ok ? `${q.flights.length} träffar` : q.message,
-    });
-    setDemoRunning(false);
+      for (const [i, action] of (["arrivals", "departures"] as const).entries()) {
+        update(i + 1, { state: "running" });
+        const res = await callFlights({ data: { action, airport, date } });
+        update(i + 1, {
+          state: res.ok ? "success" : "error",
+          detail: res.ok ? `${res.flights.length} flygningar` : res.message,
+        });
+      }
+
+      update(3, { state: "running" });
+      const q = await callQuery({
+        data: {
+          action: "query" as const,
+          airport,
+          flightType: "A" as const,
+          scheduled: date,
+          count: 50,
+        },
+      });
+      update(3, {
+        state: q.ok ? "success" : "error",
+        detail: q.ok ? `${q.flights.length} träffar` : q.message,
+      });
+    } catch {
+      const running = steps.findIndex((step) => step.state === "running");
+      if (running >= 0) {
+        update(running, { state: "error", detail: "Förfrågan kunde inte genomföras." });
+      }
+    } finally {
+      setDemoRunning(false);
+    }
   }, [airport, date, callFlights, callHeartbeat, callQuery]);
 
   const reset = useCallback(() => {
@@ -201,6 +227,9 @@ function Index() {
   const manualFlights = manualResult?.ok ? manualResult.flights : [];
   const errorFor = (res: FlightInfoResponse | null | undefined) =>
     res && !res.ok ? res.message : null;
+  const listError =
+    errorFor(listQuery.data) ??
+    (listQuery.error instanceof Error ? "Flygdata kunde inte hämtas. Försök igen." : null);
 
   return (
     <TerminalWindow online={online} mock={mock}>
@@ -234,12 +263,18 @@ function Index() {
             </p>
           ) : null}
 
+          {listActive && !dateValid ? (
+            <p role="alert" className="text-term-red">
+              Välj ett giltigt datum.
+            </p>
+          ) : null}
+
           {(view === "1" || view === "2") && (
             <>
               {listQuery.isPending ? <FlightSkeleton /> : null}
-              {errorFor(listQuery.data) ? (
+              {listError ? (
                 <div role="alert" className="term-panel space-y-2 p-4">
-                  <p className="text-term-red">{errorFor(listQuery.data)}</p>
+                  <p className="text-term-red">{listError}</p>
                   <button
                     type="button"
                     onClick={() => void listQuery.refetch()}
@@ -267,8 +302,7 @@ function Index() {
                   e.preventDefault();
                   void runQueryAction({
                     flightId: normalizeFlightNumber(flightNumber),
-                    scheduled: date,
-                    airport,
+                    count: 1000,
                   });
                 }}
               >
@@ -299,11 +333,7 @@ function Index() {
                 </p>
               ) : null}
               {manualResult?.ok ? (
-                <FlightList
-                  flights={manualFlights}
-                  meta={manualResult.meta}
-                  title="Sökresultat"
-                />
+                <FlightList flights={manualFlights} meta={manualResult.meta} title="Sökresultat" />
               ) : null}
             </div>
           )}
@@ -323,7 +353,11 @@ function Index() {
                 </p>
               ) : null}
               {manualResult?.ok ? (
-                <FlightList flights={manualFlights} meta={manualResult.meta} title="OData-resultat" />
+                <FlightList
+                  flights={manualFlights}
+                  meta={manualResult.meta}
+                  title="OData-resultat"
+                />
               ) : null}
             </div>
           )}
@@ -348,9 +382,22 @@ function Index() {
           )}
 
           {view === "dest" && (
-            <>
-              {listQuery.isPending ? <FlightSkeleton /> : <Destinations flights={listFlights} />}
-            </>
+            <div className="space-y-3">
+              {listQuery.isPending ? <FlightSkeleton /> : null}
+              {listError ? (
+                <div role="alert" className="term-panel space-y-2 p-4">
+                  <p className="text-term-red">{listError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void listQuery.refetch()}
+                    className="rounded border border-border px-2 py-1 text-xs text-term-cyan"
+                  >
+                    Försök igen
+                  </button>
+                </div>
+              ) : null}
+              {listQuery.data?.ok ? <Destinations flights={listFlights} /> : null}
+            </div>
           )}
         </div>
       </div>

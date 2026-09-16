@@ -8,7 +8,10 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "test": "node scripts/verify.mjs",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "check": "node scripts/verify.mjs && tsc --noEmit && eslint . && vite build",
     "format": "prettier --write ."
   },
   "overrides": {

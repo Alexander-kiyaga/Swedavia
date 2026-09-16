@@ -1,4 +1,5 @@
 import type { QueryArgs } from "./flight-types";
+import { toODataDate } from "./time";
 
 export const FLIGHT_ID_PATTERN = /^[A-Z0-9]{2,3}\s?\d{1,4}[A-Z]?$/;
 
@@ -11,7 +12,10 @@ export function previewFilter(args: QueryArgs): string {
   const parts: string[] = [];
   if (args.airport) parts.push(`airport eq '${args.airport}'`);
   if (args.flightType) parts.push(`flightType eq '${args.flightType}'`);
-  if (args.scheduled) parts.push(`scheduled eq '${args.scheduled}'`);
+  if (args.scheduled) {
+    const scheduled = toODataDate(args.scheduled);
+    parts.push(`scheduled eq '${scheduled ?? "ogiltigt datum"}'`);
+  }
   if (args.flightId) {
     const id = normalizeFlightNumber(args.flightId);
     parts.push(`flightId eq '${id.replace(/'/g, "''")}'`);

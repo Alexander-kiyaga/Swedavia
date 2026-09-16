@@ -11,36 +11,34 @@ interface Props {
 
 export function TerminalWindow({ online, mock, children }: Props) {
   const { theme, toggle } = useTheme();
+  const status = mock
+    ? { dot: "bg-term-amber", text: "text-term-amber", label: "Mockdata" }
+    : online === true
+      ? { dot: "bg-term-green", text: "text-term-green", label: "API online" }
+      : online === false
+        ? { dot: "bg-term-red", text: "text-term-red", label: "API offline" }
+        : { dot: "bg-muted-foreground", text: "text-muted-foreground", label: "Ej kontrollerad" };
 
   return (
-    <div className="min-h-screen bg-background px-3 py-4 sm:px-6 sm:py-10">
-      <div className="mx-auto w-full max-w-[1180px] overflow-hidden rounded-xl border border-border shadow-2xl">
-        <div className="flex flex-wrap items-center gap-2 bg-chrome px-3 py-2 sm:px-4">
-          <div className="flex items-center gap-1.5" aria-hidden="true">
-            <span className="size-3 rounded-full bg-term-red/80" />
-            <span className="size-3 rounded-full bg-term-amber/80" />
-            <span className="size-3 rounded-full bg-term-green/80" />
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-10 border-b border-border bg-chrome/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-bold text-foreground sm:text-base">
+              Swedavia FlightInfo
+            </h1>
+            <p className="text-[10px] text-muted-foreground sm:text-xs">
+              API v2 · live flight information
+            </p>
           </div>
-          <h1 className="min-w-0 flex-1 truncate px-2 text-center text-xs text-muted-foreground sm:text-sm">
-            Swedavia FlightInfo API v2 — webbklient
-          </h1>
           <div className="flex items-center gap-3">
-            {mock ? (
-              <span className="rounded border border-term-amber/50 px-1.5 py-0.5 text-[10px] tracking-wide text-term-amber uppercase">
-                Mockläge
-              </span>
-            ) : null}
             <span
               className="flex items-center gap-1.5 text-[11px] sm:text-xs"
               role="status"
               aria-live="polite"
             >
-              <span
-                className={`size-2 rounded-full ${online === false ? "bg-term-red" : "bg-term-green"}`}
-              />
-              <span className={online === false ? "text-term-red" : "text-term-green"}>
-                {online === false ? "API offline" : "API online"}
-              </span>
+              <span className={`size-2 rounded-full ${status.dot}`} />
+              <span className={status.text}>{status.label}</span>
             </span>
             <button
               type="button"
@@ -52,8 +50,10 @@ export function TerminalWindow({ online, mock, children }: Props) {
             </button>
           </div>
         </div>
-        <div className="bg-card p-3 text-sm sm:p-6">{children}</div>
-      </div>
+      </header>
+      <main className="mx-auto w-full max-w-[1280px] px-4 py-6 text-sm sm:px-6 sm:py-8">
+        {children}
+      </main>
     </div>
   );
 }

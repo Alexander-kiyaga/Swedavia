@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AIRPORT_CODES, AIRPORTS, type AirportCode } from "@/lib/airports";
 import type { QueryArgs } from "@/lib/flight-types";
 import { normalizeFlightNumber, previewFilter } from "@/lib/odata-preview";
+import { isValidApiDate } from "@/lib/time";
 
 export function ODataPanel({
   defaultAirport,
@@ -19,14 +20,20 @@ export function ODataPanel({
   const [flightType, setFlightType] = useState<"A" | "D" | "">("A");
   const [scheduled, setScheduled] = useState(defaultDate);
   const [flightId, setFlightId] = useState("");
+  const [count, setCount] = useState(100);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => setAirport(defaultAirport), [defaultAirport]);
+  useEffect(() => setScheduled(defaultDate), [defaultDate]);
 
   const args: QueryArgs = {};
   if (airport) args.airport = airport;
   if (flightType) args.flightType = flightType;
   if (scheduled) args.scheduled = scheduled;
   if (flightId.trim()) args.flightId = normalizeFlightNumber(flightId);
+  args.count = count;
   const filter = previewFilter(args);
+  const scheduledValid = !scheduled || isValidApiDate(scheduled);
 
   return (
     <form
@@ -36,7 +43,7 @@ export function ODataPanel({
         onRun(args);
       }}
     >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div>
           <label htmlFor="od-airport" className="block text-xs text-muted-foreground">
             Flygplats
@@ -54,6 +61,20 @@ export function ODataPanel({
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label htmlFor="od-count" className="block text-xs text-muted-foreground">
+            Antal (1–1000)
+          </label>
+          <input
+            id="od-count"
+            type="number"
+            min={1}
+            max={1000}
+            value={count}
+            onChange={(e) => setCount(Math.min(1000, Math.max(1, Number(e.target.value) || 1)))}
+            className="mt-1 w-full rounded border border-input bg-background px-2 py-1.5 text-foreground"
+          />
         </div>
         <div>
           <label htmlFor="od-type" className="block text-xs text-muted-foreground">
@@ -114,11 +135,16 @@ export function ODataPanel({
 
       <button
         type="submit"
-        disabled={running || !filter}
+        disabled={running || !filter || !scheduledValid}
         className="rounded border border-primary px-3 py-1.5 text-sm text-primary disabled:opacity-40"
       >
         Kör förfrågan
       </button>
+      {!scheduledValid ? (
+        <p role="alert" className="text-xs text-term-red">
+          Datumet är ogiltigt.
+        </p>
+      ) : null}
     </form>
   );
 }

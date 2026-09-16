@@ -47,7 +47,10 @@ function FlightCard({ flight }: { flight: NormalizedFlight }) {
         <Field label="Faktisk" value={formatBothTimes(flight.actualUtc)} />
         <Field label="Typ" value={flight.locationType} />
         <Field label="Via" value={flight.via.length ? flight.via.join(", ") : null} />
-        <Field label="Anmärkningar" value={flight.remarks.length ? flight.remarks.join("; ") : null} />
+        <Field
+          label="Anmärkningar"
+          value={flight.remarks.length ? flight.remarks.join("; ") : null}
+        />
       </dl>
     </li>
   );

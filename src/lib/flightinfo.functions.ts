@@ -49,7 +49,7 @@ async function cached(
 }
 
 export const getFlights = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => flightsSchema.parse(data))
+  .validator((data: unknown) => flightsSchema.parse(data))
   .handler(async ({ data }): Promise<FlightInfoResponse> => {
     const { fetchFlights } = await import("./swedavia.server");
     return cached(`${data.action}|${data.airport}|${data.date}`, () =>
@@ -58,7 +58,7 @@ export const getFlights = createServerFn({ method: "POST" })
   });
 
 export const queryFlights = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => querySchema.parse(data))
+  .validator((data: unknown) => querySchema.parse(data))
   .handler(async ({ data }): Promise<FlightInfoResponse> => {
     const { runQuery } = await import("./swedavia.server");
     const args: QueryArgs = {};
