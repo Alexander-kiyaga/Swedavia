@@ -1,10 +1,10 @@
-# Swedavia FlightInfo — webbklient
+# Swedavia FlightInfo — Web Client
 
-En responsiv terminalinspirerad webbklient för Swedavia FlightInfo API v2. Projektet visar ankomster, avgångar, sökning på flightnummer, OData-frågor, API-hälsokontroll och en automatisk demonstration av alla endpoints.
+A responsive, terminal-inspired web client for the Swedavia FlightInfo API v2. The application displays arrivals, departures, flight-number searches, OData queries, API health checks, and an automated demonstration of all endpoints.
 
-## Kom igång
+## Getting started
 
-Du behöver Node.js 20+ och valfri pakethanterare. Projektet skapades ursprungligen i Lovable och innehåller även en `bun.lock`.
+You need Node.js 20 or later and a package manager. The project was originally created in Lovable and also includes a `bun.lock` file.
 
 ```bash
 pnpm install
@@ -12,42 +12,42 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Öppna adressen som visas i terminalen. Utan API-nyckel startar appen automatiskt i tydligt markerat mockläge, så hela gränssnittet kan demonstreras utan att förbruka API-anrop.
+Open the address displayed in the terminal. Without an API key, the application automatically starts in a clearly labelled mock mode, allowing the complete interface to be demonstrated without consuming API requests.
 
-## Lägg till Swedavia-nyckeln
+## Add the Swedavia API key
 
-1. Kopiera `.env.example` till `.env.local`.
-2. Öppna `.env.local` och lägg in nyckeln efter likhetstecknet:
+1. Copy `.env.example` to `.env.local`.
+2. Open `.env.local` and enter the key after the equals sign:
 
    ```dotenv
-   SWEDAVIA_API_KEY=din_nyckel_här
+   SWEDAVIA_API_KEY=your_key_here
    ```
 
-3. Starta om utvecklingsservern.
+3. Restart the development server.
 
-Nyckeln används endast i serverkoden och skickas aldrig till webbläsaren. `.env.local` ignoreras av Git. I Lovable lägger du samma värde under projektets Secrets med namnet `SWEDAVIA_API_KEY`.
+The key is used only by the server code and is never sent to the browser. `.env.local` is ignored by Git. In Lovable, add the same value to the project's Secrets using the name `SWEDAVIA_API_KEY`.
 
-## Kontroller
+## Controls
 
-- `1` — ankomster för vald flygplats och datum
-- `2` — avgångar för vald flygplats och datum
-- `3` — sök ett specifikt flightnummer
-- `4` — bygg och kör en säker OData-fråga
-- `5` — kör HeartBeat
-- `6` — demonstrera alla endpoints i följd
-- `q` — återställ gränssnittet
-- `# Destinationer` — gruppera aktuella flyg efter stad och land
+- `1` — arrivals for the selected airport and date
+- `2` — departures for the selected airport and date
+- `3` — search for a specific flight number
+- `4` — build and run a validated OData query
+- `5` — run the HeartBeat health check
+- `6` — demonstrate all endpoints in sequence
+- `q` — reset the interface
+- `# Destinationer` — group current flights by city and country
 
-Kortkommandona fungerar när fokus inte ligger i ett formulärfält.
+Keyboard shortcuts work whenever focus is not inside a form field.
 
-## Kvalitetskontroll
+## Quality checks
 
 ```bash
 pnpm check
 ```
 
-Kommandot kör TypeScript-kontroll, lintning och en produktionsbuild.
+This command runs the automated verification script, TypeScript checks, linting, and a production build.
 
-## Säkerhet
+## Security
 
-API-nyckeln ska aldrig läggas i källkoden, i en variabel med prefixet `VITE_` eller skickas i chatten. Om en nyckel har visats i en skärminspelning eller råkat checkas in bör den regenereras i Swedavias utvecklarportal.
+Never place the API key in source code, expose it through a variable prefixed with `VITE_`, or send it in chat. If a key has appeared in a screen recording or was accidentally committed, regenerate it through the Swedavia Developer Portal.
