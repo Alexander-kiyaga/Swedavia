@@ -38,43 +38,69 @@ function str(value: unknown): string | null {
   return null;
 }
 
+const DI_LABEL: Record<string, string> = {
+  D: "Inrikes",
+  I: "Internationell",
+  S: "Schengen",
+};
+
 export function normalizeFlight(raw: unknown, direction: FlightDirection): NormalizedFlight {
   const r = (raw ?? {}) as Record<string, unknown>;
   const airline = (pick(r, "airlineOperator") ?? {}) as Record<string, unknown>;
   const status = (pick(r, "locationAndStatus") ?? {}) as Record<string, unknown>;
+  const baggage = (pick(r, "baggage") ?? {}) as Record<string, unknown>;
   const times = (pick(r, "arrivalTime", "departureTime") ?? {}) as Record<string, unknown>;
   const leg = (pick(r, "flightLegIdentifier") ?? {}) as Record<string, unknown>;
 
   const otherCity =
-    str(pick(r, "departureAirportSwedish", "departureAirportEnglish")) ??
-    str(pick(r, "arrivalAirportSwedish", "arrivalAirportEnglish"));
+    direction === "arrivals"
+      ? str(pick(r, "departureAirportSwedish", "departureAirportEnglish"))
+      : str(pick(r, "arrivalAirportSwedish", "arrivalAirportEnglish"));
   const otherIata =
-    str(pick(leg, "departureAirportIata")) ?? str(pick(leg, "arrivalAirportIata")) ?? null;
-
-  const localName = str(pick(r, "airportSwedish", "airportEnglish"));
+    direction === "arrivals"
+      ? str(pick(leg, "departureAirportIata"))
+      : str(pick(leg, "arrivalAirportIata"));
+  const localIata =
+    direction === "arrivals"
+      ? str(pick(leg, "arrivalAirportIata"))
+      : str(pick(leg, "departureAirportIata"));
+  const localName =
+    (localIata && localIata.toUpperCase() in AIRPORTS
+      ? AIRPORTS[localIata.toUpperCase() as AirportCode]
+      : null) ??
+    localIata ??
+    str(pick(r, "airportSwedish", "airportEnglish"));
 
   const viaRaw = pick(r, "viaDestinations");
   const via = Array.isArray(viaRaw)
     ? viaRaw
-        .map((v) => str(pick(v, "airportSwedish", "airportEnglish", "iata")) ?? str(v))
+        .map((v) =>
+          typeof v === "string"
+            ? v
+            : (str(pick(v, "airportSwedish", "airportEnglish", "iata")) ?? null),
+        )
         .filter((v): v is string => Boolean(v))
     : [];
 
-  const remarksRaw = pick(r, "remarks");
+  const remarksRaw = pick(r, "remarksSwedish", "remarksEnglish", "remarks");
   const remarks = Array.isArray(remarksRaw)
     ? remarksRaw
-        .map((v) => str(pick(v, "remarkSwedish", "remarkEnglish", "remark")) ?? str(v))
+        .map((v) =>
+          typeof v === "string" ? v : (str(pick(v, "remarkSwedish", "remarkEnglish", "remark")) ?? null),
+        )
         .filter((v): v is string => Boolean(v))
     : [];
+
+  const di = str(pick(r, "diIndicator"));
 
   return {
     flightId: str(pick(r, "flightId")) ?? "",
     airlineName: str(pick(airline, "name")),
     airlineIata: str(pick(airline, "iata")),
     from: direction === "arrivals" ? otherCity : localName,
-    fromIata: direction === "arrivals" ? otherIata : null,
+    fromIata: direction === "arrivals" ? otherIata : localIata,
     to: direction === "arrivals" ? localName : otherCity,
-    toIata: direction === "arrivals" ? null : otherIata,
+    toIata: direction === "arrivals" ? localIata : otherIata,
     otherCity,
     statusCode: str(pick(status, "flightLegStatus")),
     statusText:
@@ -82,17 +108,17 @@ export function normalizeFlight(raw: unknown, direction: FlightDirection): Norma
       str(pick(status, "flightLegStatus")),
     terminal: str(pick(status, "terminal")),
     gate: str(pick(status, "gate")),
-    baggageBelt: str(pick(status, "baggageSlot", "baggageBelt")),
+    baggageBelt:
+      str(pick(baggage, "belt", "baggageSlot", "id")) ??
+      str(pick(status, "baggageSlot", "baggageBelt")),
     checkIn:
       str(pick(r, "checkIn")) ??
-      str(pick(pick(r, "checkIn") as object, "checkInStatus", "checkInCounter")),
+      str(pick(pick(r, "checkIn") as object, "checkInStatus", "checkInCounter")) ??
+      str(pick(status, "checkInStatus", "checkin")),
     scheduledUtc: str(pick(times, "scheduledUtc")),
     estimatedUtc: str(pick(times, "estimatedUtc")),
     actualUtc: str(pick(times, "actualUtc")),
-    locationType:
-      str(pick(r, "locationType")) ??
-      str(pick(pick(r, "flightLegType") as object, "type")) ??
-      str(pick(r, "diStatus")),
+    locationType: di ? (DI_LABEL[di.toUpperCase()] ?? di) : null,
     via,
     remarks,
     direction,
